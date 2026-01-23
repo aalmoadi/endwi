@@ -1,0 +1,11 @@
+copyrightText = "All imagery Copyright (C) 2018 DigitalGlobe, Inc., all rights reserved. Use of this imagery and any derived product thereof is strictly limited to the internal use of the King Abdulaziz City for Science and Technology (KACST) and the Government of the Kingdom of Saudi Arabia. Any commercial use or distribution outside of the Kingdom of Saudi Arabia is prohibited. Use by the KACST or Government of the Kingdom of Saudi Arabia is for internal purposes only and subject to DigitalGlobe, Inc.'s NOAA License issued pursuant to the Commercial Remote Sensing Act of 1992.  In the event of a humanitarian crisis, however, any imagery related to the crisis may be distributed by KACST to organizations or entities assisting in relief efforts. Notwithstanding the foregoing, KACST may not distribute imagery related to the humanitarian crisis outside of the Kingdom of Saudi Arabia without DigitalGlobe's consent. Any unauthorized use or distribution at a minimum will result in revocation of satellite access rights. All questions should be addressed to DigitalGlobe Inc., Attn: General Counsel, 1601 Dry Creek Drive, Suite 260, Longmont, Colorado 80503, 1-800-655-7929";
+version = "28.0";
+intro = "This directory contains both an Imagery Product and the corresponding Image Support Data(ISD) files. The naming convention for the image is <acquisition time>-<product info>-<product id>.<format extension>";
+BEGIN_GROUP = PRODUCT_1
+	XMLFilename = "18NOV27081618-S2AS-333-22.XML";
+	licenseTxtFilename = "18NOV27081618-S2AS-333-22_LICENSE.TXT";
+	IMFFilename = "18NOV27081618-S2AS-333-22.IMD";
+	tilFilename = "18NOV27081618-S2AS-333-22.TIL";
+	RPC00BFilename = "18NOV27081618-S2AS-333-22.RPB";
+END_GROUP = PRODUCT_1
+END;
