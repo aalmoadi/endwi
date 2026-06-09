@@ -1,6 +1,6 @@
 # Z-Split Normalization (Zero-Preserving Split Normalization)
 
-**Version:** 1.0.0  
+**Version:** 1.0.1  
 **License:** MIT
 
 ---
@@ -74,6 +74,24 @@ result = normalize(your_bipolar_index)
 
 ---
 
+## Practical Applications in Remote Sensing
+
+Z-Split addresses a critical problem in any workflow involving bipolar indices across time or sensors:
+
+**1. Change Detection**  
+Applying Min-Max before change detection introduces artificial trends that appear as land cover change but reflect only normalization artifacts. A report showing "15% vegetation decline" may be entirely attributable to normalization, not reality.
+
+**2. Time Series Analysis**  
+Studies tracking floods, drought, or urban expansion over time require a clean temporal signal. Min-Max corrupts this signal by rescaling each scene independently to [0, 1], making year-to-year comparisons unreliable.
+
+**3. Multi-temporal Machine Learning**  
+Models trained on Min-Max normalized multi-year data learn spurious patterns introduced by normalization rather than real spectral change. Z-Split ensures the training signal reflects actual surface conditions.
+
+**4. InSAR and Displacement Monitoring**  
+In LOS displacement data, zero means no movement. Shifting zero through Min-Max misclassifies stable pixels as deforming, directly corrupting subsidence or uplift maps.
+
+---
+
 ## Validation
 
 ### 1. NDWI — Optical Remote Sensing
@@ -84,7 +102,20 @@ Tested on Sentinel-2 NDWI data. Z-Split successfully expanded near-zero clustere
 
 Validated on four Sentinel-2 NDVI scenes (March–April, 2018–2020–2022–2024) over Riyadh, Saudi Arabia (scale: 10 m, 5603 × 5129 pixels per scene) across 11,424 spatial patches.
 
-#### A. Linear Trend (Slope per pixel, 2018–2024)
+#### A. Normalization Artifact Analysis
+
+The figure below shows the deviation of each normalization method from the raw temporal signal. Min-Max introduces large artificial trends across the entire scene (colored map). Z-Split introduces virtually no deviation (near-white map).
+
+![Deviation Analysis](https://raw.githubusercontent.com/aalmoadi/endwi/main/Figures/deviation_analysis.png)
+
+| Method | Mean Absolute Deviation | Std |
+|--------|:-----------------------:|:---:|
+| Min-Max | 0.1858 | 0.2091 |
+| **Z-Split** | **0.0013** | **0.0017** |
+
+Z-Split preserves the temporal signal with **143× greater fidelity** than Min-Max.
+
+#### B. Linear Trend (Slope per pixel, 2018–2024)
 
 | Method | Mean Slope | Std | Correlation with Raw |
 |--------|:----------:|:---:|:--------------------:|
@@ -92,13 +123,11 @@ Validated on four Sentinel-2 NDVI scenes (March–April, 2018–2020–2022–20
 | Min-Max | 0.027454 | 0.2170 | r = 0.511 |
 | **Z-Split** | **−0.000120** | **0.0167** | **r = 0.995** |
 
-Z-Split preserves the original temporal signal with **99.5% fidelity**. Min-Max introduces artificial trends with slope Std **13× larger** than raw data.
+#### C. Multi-Temporal Change Maps
 
-#### B. Anomaly Detection (2024 vs. multi-year mean)
+The figure below compares Linear Trend, Anomaly, and Coefficient of Variation maps across all three methods. Z-Split maps are visually and statistically consistent with raw data; Min-Max maps show spatially inverted anomaly patterns and 5.5× inflated variability.
 
-Min-Max anomaly maps show spatially inverted patterns relative to raw data. Z-Split anomaly maps are visually and statistically consistent with raw data.
-
-#### C. Coefficient of Variation (CV across 2018–2024)
+![Change Analysis](https://raw.githubusercontent.com/aalmoadi/endwi/main/Figures/change_analysis.png)
 
 | Method | Mean CV |
 |--------|:-------:|
@@ -106,14 +135,12 @@ Min-Max anomaly maps show spatially inverted patterns relative to raw data. Z-Sp
 | **Z-Split** | **0.173** |
 | Min-Max | 0.832 |
 
-Min-Max inflates temporal variability by **5.5×**. Z-Split stays within 15% of the raw baseline.
-
 #### D. Threshold Stability (Otsu across 11,424 patches)
 
 | Method | Threshold Std |
 |--------|:-------------:|
 | Min-Max | 0.0882 |
-| **Z-Split** | **0.2220** |
+| Z-Split | 0.2220 |
 | Z-Score | 1.2012 |
 
 > **Note:** For strongly unipolar NDVI in arid urban areas, Min-Max threshold stability is comparable to Z-Split. Z-Split's primary advantage is in bipolar indices with narrow near-zero distributions (NDWI, InSAR LOS), consistent with its design objective.
@@ -124,7 +151,7 @@ Min-Max inflates temporal variability by **5.5×**. Z-Split stays within 15% of 
 
 Most effective when:
 - Values cluster near zero (NDWI in arid regions, InSAR LOS over stable terrain)
-- Multi-temporal consistency is required
+- Multi-temporal consistency is required (change detection, time series analysis)
 - Otsu or zero-based thresholding is applied
 - Cross-scene or cross-sensor comparisons are performed
 
@@ -138,14 +165,6 @@ Most effective when:
 | `zsplit_arcpy.py` | ArcGIS Pro implementation |
 | `Z-Split_Normalization/Validation/` | Multi-temporal NDVI change analysis |
 | `Validation/01_Optical_ENDWI/` | Optical NDWI validation |
-
----
-
-## Figures
-
-**Figure 1:** Otsu threshold distribution across 11,424 spatial patches — Min-Max vs Z-Score vs Z-Split.
-
-**Figure 2:** Multi-temporal NDVI change analysis (Linear Trend, Anomaly, CV) — Raw vs Min-Max vs Z-Split, Riyadh 2018–2024.
 
 ---
 
