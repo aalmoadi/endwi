@@ -128,20 +128,10 @@ where:
 
 ### Visual Effect on ENDWI
 
-```
-BEFORE Z-Split (raw ENDWI, DN scale):        AFTER Z-Split:
-Range: −0.0004 → +0.00015                    Range: −1.0 → +1.0
+![Z-Split Histogram Comparison](Z-Split_Normalization/los_zsplit_comparison.png)
 
-  6000 |█                                      4000 |█
-  5000 |██                                     3000 |██
-  4000 |███                                    2000 |███  ██
-  3000 |████                                   1000 |████████
-  2000 |██████                                    0 └─────────────
-  1000 |█████████                                -1.0   0.0   1.0
-     0 └──────────                              [non-water] [water]
-    -0.0004  0  0.0001
-    (Otsu unstable — too narrow)               (Otsu reliable — clear peaks)
-```
+> **Left:** Raw ENDWI histogram — extremely narrow range (−0.0004 to +0.00015), Otsu thresholding unstable.  
+> **Right:** After Z-Split — expanded to [−1, 1], clear bimodal separation, Otsu reliable.
 
 ### Where Z-Split is Most Effective
 
