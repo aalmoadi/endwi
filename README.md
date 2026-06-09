@@ -1,6 +1,7 @@
 # ENDWI — Enhanced Normalized Difference Water Index
 
 [![DOI](https://zenodo.org/badge/1037018439.svg)](https://doi.org/10.5281/zenodo.20602709)
+[![PyPI version](https://badge.fury.io/py/zsplit.svg)](https://pypi.org/project/zsplit/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Author:** Abdulrhman Almoadi  
@@ -96,6 +97,12 @@ Evaluated on 1,262 ground-truth validation points (559 flooded + 703 non-flooded
 
 ## Part 2 — Z-Split (Zero-Preserving Split Normalization)
 
+### Install
+
+```bash
+pip install zsplit
+```
+
 ### The Problem with Standard Normalization on Bipolar Indices
 
 Spectral indices such as ENDWI, NDWI, SAR coherence change, and NDVI difference are **bipolar** — they contain both positive and negative values where **zero has physical meaning** as a class boundary (e.g., water vs. non-water).
@@ -133,9 +140,48 @@ where:
 > **Left:** Raw ENDWI histogram — extremely narrow range (−0.0004 to +0.00015), Otsu thresholding unstable.  
 > **Right:** After Z-Split — expanded to [−1, 1], clear bimodal separation, Otsu reliable.
 
-### Where Z-Split is Most Effective
+### Z-Split as a Contrast Enhancement Tool
 
-Z-Split is designed for any **bipolar index where zero carries physical meaning**:
+Beyond normalization, Z-Split acts as a **contrast amplifier** for bipolar signals by independently rescaling each half of the distribution.
+
+Standard normalization compresses the entire distribution into one range, which can **collapse the contrast** near the class boundary. Z-Split avoids this by treating positive and negative halves independently:
+
+```
+Example — Narrow bipolar index (ENDWI, DN scale):
+
+Raw distribution:
+  Negative half:  −0.00041  →  0        (non-water, spread = 0.00041)
+  Positive half:   0        →  +0.00015  (water,     spread = 0.00015)
+  Contrast at boundary ≈ 0.00056  ← almost invisible
+
+After Min-Max [0, 1]:
+  Zero shifts to ~0.73 — boundary LOST ❌
+
+After Z-Split [−1, 1]:
+  Negative half: −0.00041 → −1.0  (×2439 amplification)
+  Positive half:  0.00015 → +1.0  (×6667 amplification)
+  Zero remains at 0 ✅
+  Contrast at boundary = 2.0  ← maximum possible
+```
+
+| Property | Min-Max | Z-Score | **Z-Split** |
+|---|---|---|---|
+| Amplifies weak positive signals | ✅ | ✅ | ✅ |
+| Amplifies weak negative signals | ✅ | ✅ | ✅ |
+| Preserves zero as contrast anchor | ❌ | ❌ | ✅ |
+| Maximum contrast at class boundary | ❌ | ❌ | ✅ |
+| Independent amplification per half | ❌ | ❌ | ✅ |
+| Suitable for asymmetric distributions | ❌ | ⚠️ | ✅ |
+| Visual interpretability after scaling | ⚠️ | ⚠️ | ✅ |
+
+- **Asymmetric amplification:** Each half is stretched independently — weak signals on either side receive the strongest possible amplification without distorting the other side.
+- **Boundary maximisation:** Contrast at the class boundary is always maximised to 2.0, regardless of the original distribution width.
+- **No compression artefacts:** Min-Max compresses narrow distributions into a small region of [0,1]. Z-Split treats each half as its own full range.
+- **Skew-robust:** Skewness in one half does not affect the other — each is scaled independently.
+- **ML/DL feature quality:** Features retain physical polarity and zero-anchor, improving gradient stability and avoiding sign-reversal artefacts in multi-temporal features.
+- **Otsu compatibility:** Expanding both halves to maximum range creates the clearest possible bimodal histogram — the essential condition for reliable Otsu thresholding.
+
+### Where Z-Split is Most Effective
 
 | Domain | Index | Zero Meaning | Z-Split Benefit |
 |---|---|---|---|
@@ -146,8 +192,6 @@ Z-Split is designed for any **bipolar index where zero carries physical meaning*
 | **Any bipolar ML feature** | Custom indices | Depends on application | Zero-anchored scaling ✅ |
 
 ### Computational Validation Summary
-
-Five systematic tests were conducted comparing Z-Split, Min-Max, and Z-Score:
 
 | Test | Z-Split Error | Min-Max Error | Z-Score Error |
 |---|---|---|---|
@@ -202,7 +246,18 @@ For `zsplit_arcpy.py`: ArcGIS Pro + Spatial Analyst extension required.
 
 ## Quick Start
 
-### Option A — Synthetic demo (no files needed)
+### Option A — pip install
+
+```python
+from zsplit import normalize
+import numpy as np
+
+arr = np.array([-0.00041, -0.00020, 0.0, 0.00008, 0.00015])
+print(normalize(arr))
+# [-1.    -0.488  0.     0.533  1.   ]
+```
+
+### Option B — Synthetic demo (no files needed)
 
 ```python
 import numpy as np
@@ -217,29 +272,23 @@ def zsplit_normalize(array):
         result[neg] = array[neg] / abs(np.nanmin(array[neg]))
     return result
 
-# Simulate narrow ENDWI range (DN scale)
 raw = np.random.normal(-0.00015, 0.00008, (100, 100))
 raw[40:60, 40:60] = np.random.normal(0.00008, 0.00003, (20, 20))
-
 normalized = zsplit_normalize(raw)
 print(f"Raw range:    [{raw.min():.5f}, {raw.max():.5f}]")
 print(f"Z-Split range: [{normalized.min():.4f}, {normalized.max():.4f}]")
-# Output:
-# Raw range:    [-0.00041, 0.00014]
-# Z-Split range: [-1.0000, 1.0000]
 ```
 
-### Option B — Full notebook
+### Option C — Full notebook
 
 Open `Z-Split_Normalization/zsplit_normalization.ipynb`
 
-### Option C — ArcGIS Pro
+### Option D — ArcGIS Pro
 
 ```python
-# Edit these two lines in zsplit_arcpy.py:
 INPUT_RASTER  = r"/path/to/your/ENDWI_raw.tif"
 OUTPUT_RASTER = r"/path/to/your/ENDWI_zsplit.tif"
-# Then run from ArcGIS Pro Python window
+# Then run zsplit_arcpy.py from ArcGIS Pro Python window
 ```
 
 ---
@@ -262,57 +311,3 @@ OUTPUT_RASTER = r"/path/to/your/ENDWI_zsplit.tif"
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.
-
----
-
----
-
-## Z-Split as a Contrast Enhancement Tool
-
-Beyond normalization, Z-Split acts as a **contrast amplifier** for bipolar signals by independently rescaling each half of the distribution.
-
-### How Z-Split Increases Contrast
-
-Standard normalization compresses the entire distribution into one range, which can **collapse the contrast** near the class boundary. Z-Split avoids this by treating positive and negative halves independently:
-
-```
-Example — Narrow bipolar index (ENDWI, DN scale):
-
-Raw distribution:
-  Negative half:  −0.00041  →  0       (non-water, spread = 0.00041)
-  Positive half:   0        →  +0.00015 (water,     spread = 0.00015)
-
-  Contrast at boundary ≈ 0.00015 − (−0.00041) = 0.00056  ← almost invisible
-
-After Min-Max normalization [0, 1]:
-  Zero is no longer at 0 — it shifts to ~0.73
-  Contrast near boundary is preserved but boundary is LOST
-
-After Z-Split normalization [−1, 1]:
-  Negative half stretched: −0.00041 → −1.0     (×2439 amplification)
-  Positive half stretched:  0.00015 → +1.0      (×6667 amplification)
-  Zero remains at 0 ✅
-
-  Contrast at boundary = 1.0 − (−1.0) = 2.0     ← maximum possible
-```
-
-### Contrast Enhancement Properties
-
-| Property | Min-Max | Z-Score | **Z-Split** |
-|---|---|---|---|
-| Amplifies weak positive signals | ✅ | ✅ | ✅ |
-| Amplifies weak negative signals | ✅ | ✅ | ✅ |
-| Preserves zero as contrast anchor | ❌ | ❌ | ✅ |
-| Maximum contrast at class boundary | ❌ | ❌ | ✅ |
-| Independent amplification per half | ❌ | ❌ | ✅ |
-| Suitable for asymmetric distributions | ❌ Skewed | ⚠️ Partial | ✅ |
-| Visual interpretability after scaling | ⚠️ | ⚠️ | ✅ Clear separation |
-
-### Practical Contrast Improvement Points
-
-- **Asymmetric amplification:** Each half is stretched to its maximum independently — weak signals on either side of zero receive the strongest possible amplification without distorting the other side.
-- **Boundary maximisation:** The contrast at the class boundary (zero) is always maximised to 2.0 in the normalised space (from −1 to +1), regardless of the original distribution width.
-- **No compression artefacts:** Min-Max compresses narrow distributions into one small region of [0,1]. Z-Split avoids this by treating each half as its own full range.
-- **Skew-robust:** In highly skewed distributions (common in flood, medical, and SAR data), one half may be much wider than the other. Z-Split handles this naturally — each half is scaled independently, so skewness in one half does not affect the other.
-- **ML/DL feature quality:** For machine learning models, features normalised with Z-Split maintain their physical polarity and zero-anchor, which improves gradient stability and avoids sign-reversal artefacts in multi-temporal or difference-based features.
-- **Otsu thresholding compatibility:** By expanding both halves to their maximum range, Z-Split creates the clearest possible bimodal histogram — the essential condition for Otsu's method to find a reliable threshold.
